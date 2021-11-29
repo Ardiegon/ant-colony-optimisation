@@ -15,7 +15,9 @@ https://www.kaggle.com/c/santas-stolen-sleigh
 
 ## Terminy:
 do 29.11 - Przedstawienie ogólnej koncepcji rozwiązania (w trakcie konsultacji), wstępna dokumentacja
+
 do 25.01 - Przedstawienie rozwiązania w trakcie konsultacji, dokumentacja końcowa i implementacja
+
 02.02 - Ostateczny termin zakończenia projektu
 
 ### Dokumentacja wstępna:
