@@ -44,8 +44,7 @@ class GroupedData:
                     if point[0] == 0:
                         start_group = group_id
                     g_points.append(point)
-            groups[group_id] = g_points
-
+        #     groups[group_id] = g_points
         return points, groups, group_neighbours, start_point, start_group
 
     def load_data(self, data_path):

@@ -1,7 +1,9 @@
 import pandas as pd
+import numpy as np
 
 class PointsGroup:
-    def __init__(self, min_latitude, max_latitude, min_longitude, max_longitude):
+    def __init__(self, group_id, min_latitude, max_latitude, min_longitude, max_longitude):
+        self.group_id = group_id
         self.min_latitude = min_latitude
         self.max_latitude = max_latitude
         self.min_longitude = min_longitude
@@ -23,30 +25,37 @@ class PointsGroup:
 def split_data(df):
     max_latitude = df['Latitude'].max()
     min_latitude = df['Latitude'].min()
-    max_longitude = df['Longitude'].max()
     min_longitude = df['Longitude'].min()
     current_latitude = min_latitude
     current_longitude = min_longitude
     group_list = []
+    group_id = 0
+    # df2 = df
+    df2 = df.reindex(columns = df.columns.tolist() + ['group_id'])
     while current_latitude <= max_latitude:
         df_latitude = df[df['Latitude'].between(current_latitude, current_latitude+1)]
         current_latitude += 1
         while df_latitude.shape[0] != 0:
             df_lat_long = df_latitude[df_latitude['Longitude'].between(current_longitude, current_longitude+1)]
             if df_lat_long.shape[0] != 0:
-                group = PointsGroup(current_latitude, current_latitude + 1, current_longitude, current_longitude + 1)
+                group = PointsGroup(group_id, current_latitude, current_latitude + 1, current_longitude, current_longitude + 1)
+                group_id += 1
                 for i in df_lat_long.index:
                     group.add_point_to_group(df_lat_long.loc[i, ['Latitude', 'Longitude']].tolist())
+                    df2.loc[i, 'group_id'] = group.group_id
                     df_latitude = df_latitude.drop(i)
                 group_list.append(group)
             current_longitude += 1
         current_longitude = min_longitude
-    return group_list
+    return group_list, df2
 
 if __name__ == "__main__":
-    data_path = './data/raw/'
+    data_path = '../data/raw/'
     gift_df = pd.read_csv(data_path + 'gifts.csv')
     sample_submission_df = pd.read_csv(data_path + 'sample_submission.csv')
-    group_list = split_data(gift_df)
-    # group_list = split_data(gift_df.head(200))
+    # group_list = split_data(gift_df)
+    df_new = gift_df.head(20)
+    group_list, points_df = split_data(df_new)
+    # print(points_df)
+    # print(group_list)
     

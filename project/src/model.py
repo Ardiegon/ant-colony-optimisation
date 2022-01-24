@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import logging
 import time
-from project.src.thread_with_return import ThreadWithReturn
+from thread_with_return import ThreadWithReturn
 from random import uniform
-from project.src.grouped_data import GroupedData
+from grouped_data import GroupedData
 
 class Model:
     def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight):
