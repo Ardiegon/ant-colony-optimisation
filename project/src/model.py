@@ -18,21 +18,31 @@ class Model:
     def load_data(self, gdata: GroupedData):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
 
-    def show_routes(self, groups, routes = None):
-        def randomRGB():
-            return (uniform(0.05,0.8),uniform(0.05,0.8),uniform(0.05,0.8))
+    def show_routes(self, routes = None):
+        def randomRGB(min, max):
+            return (uniform(min,max),uniform(min,max),uniform(min,max))
+        def connectpoints(p1, p2, clr):
+            x1, x2 = self.points[p1][1], self.points[p2][1]
+            y1, y2 = self.points[p1][2], self.points[p2][2]
+            plt.plot([x1, x2], [y1, y2], 'k-', color = clr)
+
+        groups = self.groups
         for group in groups:
-            clr = randomRGB()
+            clr = randomRGB(0.0, 0.8)
             for point in group:
                 if point[0] == 0:
                     plt.scatter(point[1], point[2], marker = "X", color = (0.0,0.0,0.0))
                     plt.annotate("Start", (point[1], point[2]))
                 else:
                     plt.scatter(point[1], point[2], color = clr)
+        for route in routes:
+            clr = randomRGB(0.5,0.8)
+            for i in range(len(route)-1):
+                connectpoints(route[i], route[i+1], clr)
         plt.show()
 
 if __name__ == "__main__":
     model = Model(5, 100, 1, 1)
     model.load_data(GroupedData())
-    model.show_routes(model.groups)
+    model.show_routes([[0,1,2,3,0],[0,4,5,6,7,8,0]])
 

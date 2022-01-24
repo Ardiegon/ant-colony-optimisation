@@ -9,7 +9,7 @@ class GroupedData:
             self.data = self.load_data(data_path)
 
     def generate_data(self, n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
-        point_id = np.arange(n_points) + 1
+        point_id = (np.arange(n_points) + 1).astype(int)
         x_cor = np.random.rand(n_points)*box_size
         y_cor = np.random.rand(n_points)*box_size
         weight = (np.random.rand(n_points)*(point_size[1]-point_size[0])+point_size[0])
