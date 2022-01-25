@@ -10,6 +10,7 @@ class PointsGroup:
         self.max_longitude = max_longitude
         self.points = []
         self.mid_coordinates = None
+        self.neighbours = []
 
     def calculate_mid_coordinates(self):
         coordinates = [0, 0]
@@ -21,6 +22,9 @@ class PointsGroup:
     def add_point_to_group(self, point):
         self.points.append(point)
         self.calculate_mid_coordinates()
+    
+    def add_neighbour(self, neighbour):
+        self.neighbours.append(neighbour)
 
 def split_data(df):
     max_latitude = df['Latitude'].max()
@@ -55,22 +59,34 @@ def group_list_to_df(group_list):
     df = pd.DataFrame(data, columns=['group_id', 'min_latitude', 'max_latitude', 'min_longitude', 'max_longitude', 'neighbours_id'])
     return df
 
+def find_neighbours(group_df):
+    df = group_df.copy()
+    for index, row in group_df.iterrows():
+        neighbour_list = []
+        for index2, row2 in group_df.iterrows():
+            if row['min_latitude'] == row2['max_latitude'] or row['max_latitude'] == row2['min_latitude']:
+                if row['min_longitude'] == row2['max_longitude'] or row['max_longitude'] == row2['min_longitude']:
+                    if index2 not in neighbour_list:
+                        neighbour_list.append(index2)
+        df.at[index, 'neighbours_id'] = neighbour_list
+    return df
+
 def save_points_list_to_csv(points_list_df, path):
     # TODO: odległość punktu od startu
     points_list_df.to_csv(path + 'points.csv', index = False) 
 
 def save_groups_to_csv(groups_list, path):
-    # TODO: sąsiedzi
     path = path + 'groups.csv'
-    groups_df = group_list_to_df(groups_list)
-    groups_df.to_csv(path, index = False) 
+    group_df = group_list_to_df(groups_list)
+    df = find_neighbours(group_df)
+    df.to_csv(path, index = False) 
 
 if __name__ == "__main__":
     data_path = '../data/raw/'
     gift_df = pd.read_csv(data_path + 'gifts.csv')
     sample_submission_df = pd.read_csv(data_path + 'sample_submission.csv')
     # group_list = split_data(gift_df)
-    df_test = gift_df.head(20)
+    df_test = gift_df.head(100)
     group_list, points_df = split_data(df_test)
     processed_data_path = '../data/processed/'
     save_points_list_to_csv(points_df, processed_data_path)
