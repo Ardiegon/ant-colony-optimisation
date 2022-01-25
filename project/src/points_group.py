@@ -86,9 +86,12 @@ if __name__ == "__main__":
     gift_df = pd.read_csv(data_path + 'gifts.csv')
     sample_submission_df = pd.read_csv(data_path + 'sample_submission.csv')
     # group_list = split_data(gift_df)
+    north_pole_data = []
+    north_pole_data.insert(0, {'GiftId': 0, 'Latitude': 90, 'Longitude': 0, 'Weight': 0, 'group_id': None})
     df_test = gift_df.head(100)
     group_list, points_df = split_data(df_test)
     processed_data_path = '../data/processed/'
+    points_df = pd.concat([pd.DataFrame(north_pole_data), points_df], ignore_index=True)
     save_points_list_to_csv(points_df, processed_data_path)
     save_groups_to_csv(group_list, processed_data_path)
     
