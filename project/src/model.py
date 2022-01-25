@@ -42,7 +42,9 @@ class Model:
         plt.show()
 
 if __name__ == "__main__":
-    model = Model(5, 100, 1, 1)
-    model.load_data(GroupedData())
-    model.show_routes([[0,1,2,3,0],[0,4,5,6,7,8,0]])
+    processed_data_path = '../data/processed/'
+    groupedData = GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv')
+    # model = Model(5, 100, 1, 1)
+    # model.load_data(GroupedData())
+    # model.show_routes([[0,1,2,3,0],[0,4,5,6,7,8,0]])
 
