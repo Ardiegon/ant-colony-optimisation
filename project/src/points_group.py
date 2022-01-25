@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from math import sin, cos, sqrt, atan2, radians
 
 class PointsGroup:
     def __init__(self, group_id, min_latitude, max_latitude, min_longitude, max_longitude):
@@ -71,8 +72,25 @@ def find_neighbours(group_df):
         df.at[index, 'neighbours_id'] = neighbour_list
     return df
 
+def caluclate_distance_from_north_pole(points_df):
+    np_lat = radians(90)
+    np_long = radians(0)
+    R = 6373.0 # approximate radius of earth in km
+    df = points_df.copy()
+    df['distance_np'] = np.nan
+    for index, row in points_df.iterrows():
+        lat = radians(row['Latitude'])
+        long = radians(row['Longitude'])
+        dlon = long - np_long
+        dlat = lat - np_lat
+        a = sin(dlat / 2)**2 + cos(np_lat) * cos(lat) * sin(dlon / 2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        distance = R * c
+        df.at[index, 'distance_np'] = distance
+    return df
+
 def save_points_list_to_csv(points_list_df, path):
-    # TODO: odległość punktu od startu
+    points_list_df = caluclate_distance_from_north_pole(points_list_df)
     points_list_df.to_csv(path + 'points.csv', index = False) 
 
 def save_groups_to_csv(groups_list, path):
