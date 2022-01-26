@@ -1,32 +1,37 @@
 import numpy as np
-from math import floor
+
+from math import floor, sqrt
 import pandas as pd
 from points_group import PointsGroup
 
 class GroupedData:
-    def __init__(self, points_data_path = None, groups_data_path = None):
+    def __init__(self, data_path = "", n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
         if points_data_path is None or groups_data_path is None:
-            self.data = self.generate_data()
+            self.data = self.generate_data(n_points, box_size, group_size, point_size)
+
         else:
             self.data = self.load_data(points_data_path, groups_data_path)
 
-    def generate_data(self, n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
-        point_id = (np.arange(n_points) + 1).astype(int)
-        x_cor = np.random.rand(n_points)*box_size
-        y_cor = np.random.rand(n_points)*box_size
-        weight = (np.random.rand(n_points)*(point_size[1]-point_size[0])+point_size[0])
-        points = np.stack((point_id, x_cor, y_cor, weight), axis=1)
-        start_point = np.expand_dims(np.array([0, box_size/2, box_size/2, 0]), 0)
+    def generate_data(self, n_points, box_size, group_size, point_size):
+        start_point = np.array([0, box_size/2, box_size/2, 0, 0])
+        point_id = (np.arange(n_points-1) + 1)
+        x_cor = np.random.rand(n_points-1)*box_size
+        y_cor = np.random.rand(n_points-1)*box_size
+        weight = (np.random.rand(n_points-1)*(point_size[1]-point_size[0])+point_size[0])
+        start_distance = np.zeros(n_points-1)
+        for i in range(n_points-1):
+            start_distance[i] = sqrt((x_cor[i] - box_size/2)**2+(y_cor[i] - box_size/2)**2)
+        points = np.stack((point_id, x_cor, y_cor, weight, start_distance), axis=1)
+        start_point = np.expand_dims(start_point, 0)
         points = np.concatenate((start_point, points), axis=0)
         start_point = np.squeeze(start_point, axis=0)
-        print(start_point)
         start_group = 0
 
         groups_in_side = int(box_size / group_size)
         number_of_groups = groups_in_side**2
         groups = [0 for _ in range(number_of_groups)]
         group_neighbours = []
-
+        print("Generating Data Groups...")
         for group_id in range(int(number_of_groups)):
             neighbours = np.array([])
             g_col = group_id % groups_in_side
@@ -46,7 +51,10 @@ class GroupedData:
                     if point[0] == 0:
                         start_group = group_id
                     g_points.append(point)
-        #     groups[group_id] = g_points
+            groups[group_id] = g_points
+            print(f"\r\tgroup {group_id}", end = "")
+        print("")
+
         return points, groups, group_neighbours, start_point, start_group
 
     def load_data(self, points_data, groups_data):
