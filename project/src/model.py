@@ -157,10 +157,19 @@ class Model:
 
     def update_distances_and_pheromones(self, c_points, c_distances, c_pheromones, old_p, new_p, route): #TODO kontynuuj xDD
         print("Updating distances and pheromones...", end = "")
+        print("\nLOG before:")
+        print([x[0] for x in c_points])
+        print([x[0] for x in new_p])
+        print([x[0] for x in old_p])
+        print(c_distances)
+        print(c_pheromones)
+        print(route)
         route_len_without_zero = len(route)-1
+        new_p_len = len(new_p)
         # Usuwanie wszystkich wartości między ścieżką i ścieżką
         for r1 in range(1, route_len_without_zero):
             for r2 in range(r1+1, route_len_without_zero):
+                print(get_key(route[r1], route[r2]))
                 c_distances.pop(get_key(route[r1], route[r2]))
                 c_pheromones.pop(get_key(route[r1], route[r2]))
         for p1 in old_p:
@@ -170,46 +179,70 @@ class Model:
                     continue
                 c_distances.pop(get_key(p1[0], p2_id))
                 c_pheromones.pop(get_key(p1[0], p2_id))
-            #dodawanie nowych dystansów i feromonów dla nowych punktów
+            #dodawanie nowych dystansów i feromonów dla nowych i starych punktów
             for p2 in new_p:
                 c_distances[get_key(p1[0], p2[0])] = (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
                 c_pheromones[get_key(p1[0], p2[0])] = 0
+        for r1 in range(0, new_p_len):
+            for r2 in range(r1+1, new_p_len):
+                c_distances[get_key(new_p[r1][0], new_p[r2][0])] = (new_p[r1][1] - new_p[r2][1])**2+(new_p[r1][2] - new_p[r2][2])**2
+                c_pheromones[get_key(new_p[r1][0], new_p[r2][0])] = 0
+        print("LOG after:")
+        print([x[0] for x in c_points])
+        print([x[0] for x in new_p])
+        print([x[0] for x in old_p])
+        print(c_distances)
+        print(c_pheromones)
+        print(route)
         print("\rUpdating distances and pheromones... finished")
 
 
-    def ant(self, searching_point_ids, distances):  #TODO ścieżka mrówki
-        route = []
+    def ant_trivial(self, c_points, c_distances, c_pheromones):  #TODO ścieżka mrówki
+        print("START ANT!")
+        route = [0]
+        backpack= 0
+        i = 1
+        while True:
+            if i< len(c_points) and backpack + c_points[i][3] < self.backpack_size:
+                print(backpack)
+                backpack += c_points[i][3]
+                route.append(int(c_points[i][0]))
+                i += 1
+            else:
+                break
+        route.append(0)
         return route
 
-    def search_routes(self, how_many_points_at_once):
-        points_to_use = self.pick_points(how_many_points_at_once)
+    def search_routes(self, n_points, n_ants):
+        points_to_use = self.pick_points(n_points)
         sq_distances = self.init_sq_distances(points_to_use)
         pheromones = self.init_pheromones(points_to_use)
-
-        # print([x[0] for x in points_to_use])
-        # print(sq_distances)
-        # print(pheromones)
-        # self.update_state_params(points_to_use, sq_distances, pheromones, [0,29,30,0], how_many_points_at_once)
-        # print([x[0] for x in points_to_use])
-        # print(sq_distances)
-        # print(pheromones)
-        # self.update_state_params(points_to_use, sq_distances, pheromones, [0, 52, 59, 0], how_many_points_at_once)
-        # print([x[0] for x in points_to_use])
-        # print(sq_distances)
-        # print(pheromones)
-        # self.plot_points(points_to_use)
-
-        routes = []
-
-        return routes
+        print("\nSTART:")
+        print([x[0] for x in points_to_use])
+        print(sq_distances)
+        print(pheromones)
+        result = []
+        while(len(points_to_use)>1):
+            routes = []
+            ants = []
+            for i in range(n_ants):
+                ants.append(ThreadWithReturn(target=self.ant_trivial, args=(points_to_use, sq_distances, pheromones)))
+                ants[i].start()
+            for i in range(n_ants):
+                routes.append(ants[i].join())
+            result.append(routes[0])
+            self.update_state_params(points_to_use, sq_distances, pheromones, routes[0], n_points)
+        return result
 
 
 if __name__ == "__main__":
     set_seed_for_random(20)
-    model = Model(5, 100, 1, 1)
-    model.load_data(GroupedData(n_points=100, box_size=20, group_size= 4))
-    # model.show_routes([])
-    routes = model.search_routes(5)
+    model = Model(5, 50, 1, 1)
+    model.load_data(GroupedData(n_points=30, box_size=20, group_size= 4))
+    model.show_routes([])
+    routes = model.search_routes(5, 1)
+    model.show_routes(routes)
+    print(routes)
 
 
 
