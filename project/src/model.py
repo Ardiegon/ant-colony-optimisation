@@ -43,7 +43,7 @@ class Model:
 
 if __name__ == "__main__":
     processed_data_path = '../data/processed/'
-    groupedData = GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv')
+    groupedData = GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups_test.csv')
     # model = Model(5, 100, 1, 1)
     # model.load_data(GroupedData())
     # model.show_routes([[0,1,2,3,0],[0,4,5,6,7,8,0]])

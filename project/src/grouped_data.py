@@ -50,10 +50,11 @@ class GroupedData:
         return points, groups, group_neighbours, start_point, start_group
 
     def load_data(self, points_data, groups_data):
-        points_df = pd.read_csv (points_data)
-        groups_df = pd.read_csv (groups_data)
-        groups = []
-        group_neighbours = []
+        points_df = pd.read_csv(points_data)
+        groups_df = pd.read_csv(groups_data)
+        group_class = []
+        group_neighbours = [[] for _ in range(len(groups_df))]
+        groups = [[] for _ in range(len(groups_df))]
 
         for index, row in groups_df.iterrows():
             group_id = row['group_id']
@@ -62,21 +63,39 @@ class GroupedData:
             min_longitude = row['min_longitude']
             max_longitude = row['max_longitude']
             neighbors_id = row['neighbours_id']
-            neighbors_id = list(neighbors_id)
-            neighbors_id.remove('[')
-            neighbors_id.remove(']')
+            neighbors_id = neighbors_id[1:-1]
+            if len(neighbors_id) == 0:
+                neighbors_id = []
+            else:
+                neighbors_id = list(neighbors_id.split(","))
             group = PointsGroup(group_id, min_latitude, max_latitude, min_longitude, max_longitude)
             for neighbour in neighbors_id:
                 group.add_neighbour(neighbour)
-                group_neighbours.append([index, int(neighbour)])
-            groups.append(group)
-        start_point = points_df.loc[0].tolist()
+                group_neighbours[index].append(int(neighbour))
+            group_class.append(group)
+            
+        for index, row in groups_df.iterrows():
+            if index != 0:
+                if abs(row['min_latitude'] - points_df.loc[0]['Latitude']) < 1 or abs(row['max_latitude'] - points_df.loc[0]['Latitude']) < 1:
+                    if abs(row['min_longitude'] - points_df.loc[0]['Longitude']) < 1 or abs(row['max_longitude'] - points_df.loc[0]['Longitude']) < 1:
+                        points_df.at[0, 'group_id'] = row['group_id']
+                        break
+        if np.isnan(points_df.at[0, 'group_id']):
+            points_df.at[0, 'group_id'] = groups_df['group_id'].tolist()[-1] + 1
+            group_neighbours.append([])
+            groups.append([])
+
+        for index, row in points_df.iterrows():
+            groups[int(row['group_id'])].append(index)
+
+        start_point = points_df.loc[0, ['GiftId', 'Latitude', 'Longitude', 'Weight', 'distance_np']].tolist()
         start_point = np.array(start_point)
-        points = [points_df.loc[i].tolist() for i in range(1, len(points_df))]
+        points = [points_df.loc[i, ['GiftId', 'Latitude', 'Longitude', 'Weight', 'distance_np']].tolist() for i in range(len(points_df))]
         points = np.array(points)
         np.set_printoptions(suppress=True)
-        start_group = groups[0].group_id
+        start_group = points_df.at[0, 'group_id']
         # print(points)
+        # print(points_df)
         # print(groups)
         # print(group_neighbours)
         # print(start_group)
