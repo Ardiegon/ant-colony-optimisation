@@ -10,6 +10,8 @@ from math import sqrt
 from queue import Queue
 from project.src.grouped_data import GroupedData
 
+def get_key(point_1_id, point_2_id):
+    return f"{int(min(point_1_id, point_2_id))}/{int(max(point_1_id, point_2_id))}"
 
 class Model:
     def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight):
@@ -21,6 +23,7 @@ class Model:
 
     def load_data(self, gdata: GroupedData):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
+
         self.picked_points = np.zeros(len(self.points))
         self.added_points = np.zeros(len(self.points))
         self.used_groups = np.zeros(len(self.groups))
@@ -36,7 +39,6 @@ class Model:
 
         groups = self.groups
         for iter, group in enumerate(groups):
-            print(f"plotting group {iter}")
             clr = randomRGB(0.0, 0.8)
             for point in group:
                 if point[0] == 0:
@@ -44,7 +46,7 @@ class Model:
                     plt.annotate("Start", (point[1], point[2]))
                 else:
                     plt.scatter(point[1], point[2], color = clr)
-                    plt.annotate(int(point[3]), (point[1], point[2]),  fontsize=6)
+                    plt.annotate(f"{int(point[0])} / {int(point[3])}", (point[1], point[2]),  fontsize=5)
         for route in routes:
             clr = randomRGB(0.3,0.8)
             for i in range(len(route)-1):
@@ -57,7 +59,8 @@ class Model:
                 plt.annotate("Start", (point[1], point[2]))
                 plt.scatter(point[1], point[2], marker = "X", color = (0.0,0.0,0.0))
             else:
-                plt.scatter(point[1], point[2], color= (0.0,0.0,1.0))
+                plt.scatter(point[1], point[2], color= (1.0,0.0,0.0))
+                plt.annotate(f"{int(point[0])} / {int(point[3])}", (point[1], point[2]), fontsize=5)
         plt.show()
 
     def pick_points(self, min_points):
@@ -90,8 +93,7 @@ class Model:
         print(f"Initiating distances of {len(chosen_points)} points squared ...")
         for i in range(len(chosen_points)):
             for j in range(i+1, len(chosen_points)):
-                key = [chosen_points[i][0], chosen_points[j][0]]
-                key.sort()
+                key = get_key(chosen_points[i][0], chosen_points[j][0])
                 distances[key] = (chosen_points[i][1] - chosen_points[j][1])**2+(chosen_points[i][2] - chosen_points[j][2])**2
             print(f"\r\tcalculated {(int(((i+1)*n_all)-((i+1)**2-(i+1))/2+i+1)/int((n_all*n_all-n_all)/2))*100 :.2f}%", end="")
         print(f"\r\tcalculated 100%, finished")
@@ -103,8 +105,7 @@ class Model:
         print(f"Initiating pheromones of {len(chosen_points)} points squared ...")
         for i in range(len(chosen_points)):
             for j in range(i+1, len(chosen_points)):
-                key = [chosen_points[i][0], chosen_points[j][0]]
-                key.sort()
+                key = get_key(chosen_points[i][0], chosen_points[j][0])
                 pheromones[key] = 0
             print(f"\r\tcalculated {(int(((i+1)*n_all)-((i+1)**2-(i+1))/2+i+1)/int((n_all*n_all-n_all)/2))*100 :.2f}%", end="")
         print(f"\r\tcalculated 100%, finished")
@@ -114,16 +115,18 @@ class Model:
         for point_id in route:
             self.picked_points[int(point_id)] = 1
         del_ids = []
-        old_p_ids = [0]
+        old_p_ids = []
         for i, point in enumerate(c_points):
-            if point in route and int(point[0]) != 0:
+            if int(point[0]) in route and int(point[0]) != 0:
                 del_ids.append(i)
             else:
-                old_p_ids.append(point[0])
+                old_p_ids.append((point[0], point[1], point[2]))
         del_ids.reverse()
         for i in del_ids:
             c_points.pop(i)
         new_p_ids = self.update_points(c_points, min_points)
+        self.update_distances_and_pheromones(c_points, c_distances, c_pheromones, old_p_ids, new_p_ids, route)
+
 
     def update_points(self, c_points, min_points):
         group_q = Queue()
@@ -145,18 +148,34 @@ class Model:
             for point in self.groups[curr_group]:
                 if self.added_points[int(point[0])] == 0:
                     c_points.append(point)
-                    new_p_ids.append(point[0])
+                    new_p_ids.append((point[0], point[1], point[2]))
                     self.added_points[int(point[0])] = 1
             self.used_groups[curr_group] = 1
             print(f"\r\taccumulated: {len(c_points)}", end="")
         print(f"\r\taccumulated: {len(c_points)}, finished")
         return new_p_ids
 
-    def update_distances(self, distances, old_p_ids, new_p_ids): #TODO kontynuuj xDD
-        pass
+    def update_distances_and_pheromones(self, c_points, c_distances, c_pheromones, old_p, new_p, route): #TODO kontynuuj xDD
+        print("Updating distances and pheromones...", end = "")
+        route_len_without_zero = len(route)-1
+        # Usuwanie wszystkich wartości między ścieżką i ścieżką
+        for r1 in range(1, route_len_without_zero):
+            for r2 in range(r1+1, route_len_without_zero):
+                c_distances.pop(get_key(route[r1], route[r2]))
+                c_pheromones.pop(get_key(route[r1], route[r2]))
+        for p1 in old_p:
+            # Usuwanie wszystkich wartości między ścieżką i wpisami które zostały w punktach
+            for val, p2_id in enumerate(route):
+                if p2_id == 0:
+                    continue
+                c_distances.pop(get_key(p1[0], p2_id))
+                c_pheromones.pop(get_key(p1[0], p2_id))
+            #dodawanie nowych dystansów i feromonów dla nowych punktów
+            for p2 in new_p:
+                c_distances[get_key(p1[0], p2[0])] = (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
+                c_pheromones[get_key(p1[0], p2[0])] = 0
+        print("\rUpdating distances and pheromones... finished")
 
-    def update_pheromones(self, pheromones, old_p_ids, new_p_ids):
-        pass
 
     def ant(self, searching_point_ids, distances):  #TODO ścieżka mrówki
         route = []
@@ -166,6 +185,20 @@ class Model:
         points_to_use = self.pick_points(how_many_points_at_once)
         sq_distances = self.init_sq_distances(points_to_use)
         pheromones = self.init_pheromones(points_to_use)
+
+        # print([x[0] for x in points_to_use])
+        # print(sq_distances)
+        # print(pheromones)
+        # self.update_state_params(points_to_use, sq_distances, pheromones, [0,29,30,0], how_many_points_at_once)
+        # print([x[0] for x in points_to_use])
+        # print(sq_distances)
+        # print(pheromones)
+        # self.update_state_params(points_to_use, sq_distances, pheromones, [0, 52, 59, 0], how_many_points_at_once)
+        # print([x[0] for x in points_to_use])
+        # print(sq_distances)
+        # print(pheromones)
+        # self.plot_points(points_to_use)
+
         routes = []
 
         return routes
@@ -175,8 +208,8 @@ if __name__ == "__main__":
     set_seed_for_random(20)
     model = Model(5, 100, 1, 1)
     model.load_data(GroupedData(n_points=100, box_size=20, group_size= 4))
-    model.show_routes([])
-    routes = model.search_routes(20)
+    # model.show_routes([])
+    routes = model.search_routes(5)
 
 
 
