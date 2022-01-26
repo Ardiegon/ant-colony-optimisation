@@ -50,6 +50,7 @@ class GroupedData:
             groups[group_id] = g_points
             print(f"\r\tgroup {group_id}", end = "")
         print("")
+
         return points, groups, group_neighbours, start_point, start_group
 
     def load_data(self, data_path):

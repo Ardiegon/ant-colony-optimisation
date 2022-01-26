@@ -10,6 +10,7 @@ from math import sqrt
 from queue import Queue
 from project.src.grouped_data import GroupedData
 
+
 def get_key(point_1_id, point_2_id):
     return f"{int(min(point_1_id, point_2_id))}/{int(max(point_1_id, point_2_id))}"
 
