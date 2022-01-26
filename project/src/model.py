@@ -133,7 +133,7 @@ class Model:
         group_q.put(self.start_group)
         group_history = [self.start_group]
         new_p_ids = []
-        print(f"Updating points, minimum {min_points}, current {len(c_points)}")
+        print(f"\nUpdating points, minimum {min_points}, current {len(c_points)}")
         while len(c_points) < min_points:
             if group_q.empty():
                 print(f"\r\tOnly {len(c_points)} left")
@@ -157,19 +157,18 @@ class Model:
 
     def update_distances_and_pheromones(self, c_points, c_distances, c_pheromones, old_p, new_p, route): #TODO kontynuuj xDD
         print("Updating distances and pheromones...", end = "")
-        print("\nLOG before:")
-        print([x[0] for x in c_points])
-        print([x[0] for x in new_p])
-        print([x[0] for x in old_p])
-        print(c_distances)
-        print(c_pheromones)
-        print(route)
+        # print("\nLOG before:")
+        # print([x[0] for x in c_points])
+        # print([x[0] for x in new_p])
+        # print([x[0] for x in old_p])
+        # print(c_distances)
+        # print(c_pheromones)
+        # print(route)
         route_len_without_zero = len(route)-1
         new_p_len = len(new_p)
         # Usuwanie wszystkich wartości między ścieżką i ścieżką
         for r1 in range(1, route_len_without_zero):
             for r2 in range(r1+1, route_len_without_zero):
-                print(get_key(route[r1], route[r2]))
                 c_distances.pop(get_key(route[r1], route[r2]))
                 c_pheromones.pop(get_key(route[r1], route[r2]))
         for p1 in old_p:
@@ -187,24 +186,22 @@ class Model:
             for r2 in range(r1+1, new_p_len):
                 c_distances[get_key(new_p[r1][0], new_p[r2][0])] = (new_p[r1][1] - new_p[r2][1])**2+(new_p[r1][2] - new_p[r2][2])**2
                 c_pheromones[get_key(new_p[r1][0], new_p[r2][0])] = 0
-        print("LOG after:")
-        print([x[0] for x in c_points])
-        print([x[0] for x in new_p])
-        print([x[0] for x in old_p])
-        print(c_distances)
-        print(c_pheromones)
-        print(route)
+        # print("LOG after:")
+        # print([x[0] for x in c_points])
+        # print([x[0] for x in new_p])
+        # print([x[0] for x in old_p])
+        # print(c_distances)
+        # print(c_pheromones)
+        # print(route)
         print("\rUpdating distances and pheromones... finished")
 
 
-    def ant_trivial(self, c_points, c_distances, c_pheromones):  #TODO ścieżka mrówki
-        print("START ANT!")
+    def ant_trivial(self, c_points, c_distances, c_pheromones):
         route = [0]
-        backpack= 0
+        backpack = 0
         i = 1
         while True:
             if i< len(c_points) and backpack + c_points[i][3] < self.backpack_size:
-                print(backpack)
                 backpack += c_points[i][3]
                 route.append(int(c_points[i][0]))
                 i += 1
@@ -217,10 +214,10 @@ class Model:
         points_to_use = self.pick_points(n_points)
         sq_distances = self.init_sq_distances(points_to_use)
         pheromones = self.init_pheromones(points_to_use)
-        print("\nSTART:")
-        print([x[0] for x in points_to_use])
-        print(sq_distances)
-        print(pheromones)
+        # print("\nSTART:")
+        # print([x[0] for x in points_to_use])
+        # print(sq_distances)
+        # print(pheromones)
         result = []
         while(len(points_to_use)>1):
             routes = []
@@ -238,10 +235,10 @@ class Model:
 if __name__ == "__main__":
     set_seed_for_random(20)
     model = Model(5, 50, 1, 1)
-    model.load_data(GroupedData(n_points=30, box_size=20, group_size= 4))
-    model.show_routes([])
-    routes = model.search_routes(5, 1)
-    model.show_routes(routes)
+    model.load_data(GroupedData(n_points=10000, box_size=20, group_size= 4))
+    # model.show_routes([])
+    routes = model.search_routes(50, 3)
+    # model.show_routes(routes)
     print(routes)
 
 
