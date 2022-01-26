@@ -91,10 +91,10 @@ def caluclate_distance_from_north_pole(points_df):
 
 def save_points_list_to_csv(points_list_df, path):
     points_list_df = caluclate_distance_from_north_pole(points_list_df)
-    points_list_df.to_csv(path + 'points.csv', index = False) 
+    points_list_df.to_csv(path + 'points_test.csv', index = False) 
 
 def save_groups_to_csv(groups_list, path):
-    path = path + 'groups.csv'
+    path = path + 'groups_test.csv'
     group_df = group_list_to_df(groups_list)
     df = find_neighbours(group_df)
     df.to_csv(path, index = False) 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     north_pole_data = []
     north_pole_data.insert(0, {'GiftId': 0, 'Latitude': 90, 'Longitude': 0, 'Weight': 0, 'group_id': None})
     df_test = gift_df.head(100)
-    group_list, points_df = split_data(df_test)
+    group_list, points_df = split_data(gift_df)
     processed_data_path = '../data/processed/'
     points_df = pd.concat([pd.DataFrame(north_pole_data), points_df], ignore_index=True)
     save_points_list_to_csv(points_df, processed_data_path)
