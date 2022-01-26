@@ -5,10 +5,9 @@ import pandas as pd
 from points_group import PointsGroup
 
 class GroupedData:
-    def __init__(self, data_path = "", n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
+    def __init__(self, points_data_path = None, groups_data_path = None, n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
         if points_data_path is None or groups_data_path is None:
             self.data = self.generate_data(n_points, box_size, group_size, point_size)
-
         else:
             self.data = self.load_data(points_data_path, groups_data_path)
 

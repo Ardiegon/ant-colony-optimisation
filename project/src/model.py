@@ -235,8 +235,9 @@ class Model:
 
 if __name__ == "__main__":
     set_seed_for_random(20)
+    processed_data_path = '../data/processed/'
     model = Model(5, 50, 1, 1)
-    model.load_data(GroupedData(n_points=10000, box_size=20, group_size= 4))
+    model.load_data(GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups_test.csv'))
     # model.show_routes([])
     routes = model.search_routes(50, 3)
     # model.show_routes(routes)
