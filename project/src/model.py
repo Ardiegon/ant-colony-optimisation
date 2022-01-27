@@ -7,7 +7,7 @@ import time
 from project.src.thread_with_return import ThreadWithReturn
 from project.src.project_utils import set_seed_for_random
 from random import uniform, seed
-from math import sqrt
+from math import sqrt, radians
 from queue import Queue
 from project.src.grouped_data import GroupedData
 
@@ -105,7 +105,7 @@ class Model:
         for i in range(len(chosen_points)):
             for j in range(i+1, len(chosen_points)):
                 key = get_key(chosen_points[i][0], chosen_points[j][0])
-                distances[key] = sqrt((chosen_points[i][1] - chosen_points[j][1])**2+(chosen_points[i][2] - chosen_points[j][2])**2)
+                distances[key] = self.distance(chosen_points[i], chosen_points[j])
             print(f"\r\tcalculated {(int(((i+1)*n_all)-((i+1)**2-(i+1))/2+i+1)/int((n_all*n_all-n_all)/2))*100 :.2f}%", end="")
         print(f"\r\tcalculated 100%, finished")
         return distances
@@ -184,11 +184,11 @@ class Model:
                 c_pheromones.pop(get_key(p1[0], p2_id))
             #dodawanie nowych dystansów i feromonów dla nowych i starych punktów
             for p2 in new_p:
-                c_distances[get_key(p1[0], p2[0])] = sqrt((p1[1] - p2[1])**2+(p1[2] - p2[2])**2)
+                c_distances[get_key(p1[0], p2[0])] = self.distance(p1, p2)
                 c_pheromones[get_key(p1[0], p2[0])] = 0
         for r1 in range(0, new_p_len):
             for r2 in range(r1+1, new_p_len):
-                c_distances[get_key(new_p[r1][0], new_p[r2][0])] = sqrt((new_p[r1][1] - new_p[r2][1])**2+(new_p[r1][2] - new_p[r2][2])**2)
+                c_distances[get_key(new_p[r1][0], new_p[r2][0])] = self.distance(new_p[r1], new_p[r2])
                 c_pheromones[get_key(new_p[r1][0], new_p[r2][0])] = 0
         print("\rUpdating distances and pheromones... finished")
 
@@ -267,7 +267,7 @@ class Model:
                 g_scores = np.zeros(self.n_ants)
                 ants = []
                 for i in range(self.n_ants):
-                    ants.append(ThreadWithReturn(target=self.ant, args=(points_to_use, sq_distances, pheromones)))
+                    ants.append(ThreadWithReturn(target=self.ant_trivial, args=(points_to_use, sq_distances, pheromones)))
                     ants[i].start()
                 for i in range(self.n_ants):
                     route, score = ants[i].join()
@@ -282,8 +282,23 @@ class Model:
             self.update_state_params(points_to_use, sq_distances, pheromones, picked_route, n_points)
         return result, all_score
 
+    # def distance(self, p1, p2):
+    #     return (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
+
     def distance(self, p1, p2):
-        return (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
+        """
+        Calculate the harverstine distance in kilometers between two points
+        on the earth (specified in decimal degrees)
+        """
+        # convert decimal degrees to radians
+        lat1, lon1, lat2, lon2 = map(radians, [p1[1], p1[2], p2[1], p2[2]])
+
+        # haversine formula
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
+        c = 2 * np.arcsin(np.sqrt(a))
+        return c
 
     def get_score(self, route, weights, c_distances):
         sc = 0
@@ -300,7 +315,7 @@ if __name__ == "__main__":
     # groupedData = GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups.csv')
     # set_seed_for_random(20)
     # processed_data_path = '../data/processed/'
-    model = Model(5, 50, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
+    model = Model(8, 1000, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
     model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
     # model.load_data(GroupedData(n_points=100, box_size=20, group_size=4))
     #===========
@@ -309,7 +324,7 @@ if __name__ == "__main__":
     # model.load_data(GroupedData(n_points=10000, box_size=20, group_size= 4))
     #==============
     # model.show_routes([])
-    routes, score = model.search_routes(100, gen_counter=3)
+    routes, score = model.search_routes(150, gen_counter=3)
     # model.show_routes(routes)
     print(routes)
     print(score)
