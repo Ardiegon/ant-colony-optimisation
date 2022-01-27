@@ -2,7 +2,7 @@ import numpy as np
 
 from math import floor, sqrt
 import pandas as pd
-from points_group import PointsGroup
+from project.src.points_group import PointsGroup
 
 class GroupedData:
     def __init__(self, points_data_path = None, groups_data_path = None, n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):

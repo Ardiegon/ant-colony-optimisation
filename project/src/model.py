@@ -13,10 +13,30 @@ from project.src.grouped_data import GroupedData
 
 
 def get_key(point_1_id, point_2_id):
+    '''
+    Creates key for further use in tables with distances and pheromones for wo specific points
+    :param point_1_id: first point id
+    :param point_2_id: second point id
+    :return: String key, for example p1 = 3, p2 = 0 => result = "0/3"
+    '''
     return f"{int(min(point_1_id, point_2_id))}/{int(max(point_1_id, point_2_id))}"
 
 class Model:
+    '''
+    Model calculating optimal routes for kaggle problem:
+    https://www.kaggle.com/c/santas-stolen-sleigh/overview/description
+    '''
     def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight, _size_weight, _home_weight, _selection_size):
+        '''
+        Model constructor.
+        :param _n_ants: Size of population, number of threads to calculate one route at the same time.
+        :param _selection_size: How many routes from single generation will leave pheromone trails for further generations
+        :param _backpack_size: Maximum weight of presents to put in sleigh
+        :param _pheromone_weight: Used to count desirability in single ant
+        :param _distance_weight: Used to count desirability in single ant
+        :param _size_weight: Used to count desirability in single ant
+        :param _home_weight: Used to count desirability in single ant
+        '''
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group, self.picked_points, self.added_points, self.used_groups = (None, None, None, None, None, None, None, None)
         self.n_ants = _n_ants
         self.pheromone_weight = _pheromone_weight
@@ -27,55 +47,33 @@ class Model:
         self.selection_size = _selection_size
 
     def load_data(self, gdata: GroupedData):
+        '''
+        Loads data from GroupedData class. Data format is:
+        - points: list of all presents as [point1, point2, ...]
+            - single point is defined as [point_id, latitude, longitude, weight, distance_to_arctica]
+        - groups: list of grouped points into smaller portions
+        - group_neighbours: all neighbors of group given by id of this list
+        - start_point: arctica, point with id 0
+        - start group: group which arctica belongs to
+        :param gdata: object of class with prepared data
+        '''
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
-        print(len(self.points))
-        # print(self.points[:5])
-        # print(self.groups[:5])
-        # print(self.groups_neighbours[:15])
-        # print(self.start_point)
-        # print(self.start_group)
-        # print(self.groups[int(self.start_group)])
-
         self.picked_points = np.zeros(len(self.points))
         self.added_points = np.zeros(len(self.points))
         self.used_groups = np.zeros(len(self.groups))
 
 
-    def show_routes(self, routes = None):
-        def randomRGB(min, max):
-            return (uniform(min,max),uniform(min,max),uniform(min,max))
-        def connectpoints(p1, p2, clr):
-            x1, x2 = self.points[p1][1], self.points[p2][1]
-            y1, y2 = self.points[p1][2], self.points[p2][2]
-            plt.plot([x1, x2], [y1, y2], color = clr, linewidth= 0.5)
-
-        groups = self.groups
-        for iter, group in enumerate(groups):
-            clr = randomRGB(0.0, 0.8)
-            for point in group:
-                if point[0] == 0:
-                    plt.scatter(point[1], point[2], marker = "X", color = (0.0,0.0,0.0))
-                    plt.annotate("Start", (point[1], point[2]))
-                else:
-                    plt.scatter(point[1], point[2], color = clr)
-                    plt.annotate(f"{int(point[0])} / {int(point[3])}", (point[1], point[2]),  fontsize=5)
-        for route in routes:
-            clr = randomRGB(0.3,0.8)
-            for i in range(len(route)-1):
-                connectpoints(route[i], route[i+1], clr)
-        plt.show()
-
-    def plot_points(self, points):
-        for point in points:
-            if point[0] == 0:
-                plt.annotate("Start", (point[1], point[2]))
-                plt.scatter(point[1], point[2], marker = "X", color = (0.0,0.0,0.0))
-            else:
-                plt.scatter(point[1], point[2], color= (1.0,0.0,0.0))
-                plt.annotate(f"{int(point[0])} / {int(point[3])}", (point[1], point[2]), fontsize=5)
-        plt.show()
-
     def pick_points(self, min_points):
+        '''
+        Initiates first batch of points to go into processing. We chose groups of points that are close together,
+        and use nly them for less memory complexity, because those points will often calculate things with O(n^2)
+
+        Rule is that from starting group, we get neighbours of it into priority queue. When all points from current
+        group are taken we move into next group, and take it's neighbours and points and so on.
+
+        :param min_points: Minimum number of picked points. There could be more of them, but only about size of single group.
+        :return list of points to further process.
+        '''
         using_points = []
         group_q = Queue()
         group_q.put(self.start_group)
@@ -100,6 +98,12 @@ class Model:
         return using_points
 
     def init_sq_distances(self, chosen_points):
+        '''
+        For picked batch of point we calculates distances beetween them, as it's required to process single ant with
+        optimal time complexity.
+        :param chosen_points: batch of points (look: pick_points)
+        :return: dictionary of distances between every two points in chosen_points. Uses key from get_key(p1,p2)
+        '''
         distances = {}
         n_all = len(chosen_points)
         print(f"Initiating distances of {len(chosen_points)} points squared ...")
@@ -112,6 +116,11 @@ class Model:
         return distances
 
     def init_pheromones(self, chosen_points):
+        '''
+        Rule is the same as init_sq_distances, it initiates pheromones dictionary with zeros.
+        :param chosen_points: batch of points (look: pick_points)
+        :return: dictionary of pheromones between every two points in chosen_points. Uses key from get_key(p1,p2)
+        '''
         pheromones = {}
         n_all = len(chosen_points)
         print(f"Initiating pheromones of {len(chosen_points)} points squared ...")
@@ -124,6 +133,20 @@ class Model:
         return pheromones
 
     def update_state_params(self, c_points, c_distances, c_pheromones, route, min_points):
+        """
+        As we got our route, points of that route are no longer use for us. This function updates batch of points by
+        adding new if number of points in batch is lower than minimum. After new batch is taken, we need to delete old
+        distances and pheromones, because they are bound to points that are no longer in batch.
+        For newly added points we need to calculate distances and initialize pheromones.
+
+        It works strongly on references, to avoid any deepcopy.
+
+        :param c_points: batch of points
+        :param c_distances: distances dictionary
+        :param c_pheromones: pheromones dictionary
+        :param route: newly picked route
+        :param min_points: minimum number of points in c_points
+        """
         for point_id in route:
             self.picked_points[int(point_id)] = 1
         del_ids = []
@@ -226,8 +249,6 @@ class Model:
             for i, point in enumerate(c_points):
                 key = get_key(route[-1], point[0])
                 if not used[i] and backpack + point[3] < self.backpack_size:
-                    # if last_point[4] < backpack_occupancy*c_distances[key]: #TODO lepszy sposób na ucinanie dalekich dopełnień
-                    #     continue
                     counter += 1
                     desirability[i] = (1/c_distances[key])**self.distance_weight * (c_pheromones[key]**self.pheromone_weight + point[3]**self.size_weight + point[4]**self.home_weight*backpack_occupancy)
             if not counter:
@@ -244,7 +265,6 @@ class Model:
                     best_point_id = i
                     break
             used[i] = 1
-            last_point = c_points[i]
             backpack += c_points[best_point_id][3]
             weights.append(c_points[best_point_id][3])
             route.append(int(c_points[best_point_id][0]))
@@ -318,27 +338,47 @@ class Model:
             weight_now -= weights[i]
         return sc
 
+    def show_routes(self, routes = None):
+        '''
+        Shows routes on map. For big number of points this function will work very slow.
+        It's better to use with synthetic data only.
+        :param routes: Routes to show on map
+        '''
+        def randomRGB(min, max):
+            return (uniform(min,max),uniform(min,max),uniform(min,max))
+        def connectpoints(p1, p2, clr):
+            x1, x2 = self.points[p1][1], self.points[p2][1]
+            y1, y2 = self.points[p1][2], self.points[p2][2]
+            plt.plot([x1, x2], [y1, y2], color = clr, linewidth= 0.5)
 
-if __name__ == "__main__":
-    processed_data_path = '../data/processed/'
-    set_seed_for_random(6)
+        groups = self.groups
+        for iter, group in enumerate(groups):
+            clr = randomRGB(0.0, 0.8)
+            for point in group:
+                if point[0] == 0:
+                    plt.scatter(point[1], point[2], marker = "X", color = (0.0,0.0,0.0))
+                    plt.annotate("Start", (point[1], point[2]))
+                else:
+                    plt.scatter(point[1], point[2], color = clr)
+                    plt.annotate(f"{int(point[0])} / {int(point[3])}", (point[1], point[2]),  fontsize=5)
+        for route in routes:
+            clr = randomRGB(0.3,0.8)
+            for i in range(len(route)-1):
+                connectpoints(route[i], route[i+1], clr)
+        plt.show()
 
-    #===========
-    # model = Model(8, 1000, _selection_size = 4, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
-    # model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
-    # routes, score = model.search_routes(120, gen_counter=3)
-
-    #===========
-    model = Model(8, 100, _selection_size = 6, _pheromone_weight=2, _distance_weight=4, _size_weight=3, _home_weight=1)
-    model.load_data(GroupedData(n_points=100, box_size=20, group_size= 4))
-    routes, score = model.search_routes(50, gen_counter=3)
-    model.show_routes(routes[:5])
-
-    #==============
-    print(routes)
-    print(score)
-
-
-
+    def plot_points(self, points):
+        '''
+        Plots list of points on map.
+        :param points: list of points
+        '''
+        for point in points:
+            if point[0] == 0:
+                plt.annotate("Start", (point[1], point[2]))
+                plt.scatter(point[1], point[2], marker = "X", color = (0.0,0.0,0.0))
+            else:
+                plt.scatter(point[1], point[2], color= (1.0,0.0,0.0))
+                plt.annotate(f"{int(point[0])} / {int(point[3])}", (point[1], point[2]), fontsize=5)
+        plt.show()
 
 
