@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy
 import pandas as pd
 import numpy as np
 import logging
@@ -15,12 +16,14 @@ def get_key(point_1_id, point_2_id):
     return f"{int(min(point_1_id, point_2_id))}/{int(max(point_1_id, point_2_id))}"
 
 class Model:
-    def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight):
+    def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight, _size_weight, _home_weight):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group, self.picked_points, self.added_points, self.used_groups = (None, None, None, None, None, None, None, None)
         self.n_ants = _n_ants
         self.pheromone_weight = _pheromone_weight
         self.backpack_size = _backpack_size
         self.distance_weight = _distance_weight
+        self.size_weight = _size_weight
+        self.home_weight = _home_weight
 
     def load_data(self, gdata: GroupedData):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
@@ -43,7 +46,7 @@ class Model:
         def connectpoints(p1, p2, clr):
             x1, x2 = self.points[p1][1], self.points[p2][1]
             y1, y2 = self.points[p1][2], self.points[p2][2]
-            plt.plot([x1, x2], [y1, y2], color = clr)
+            plt.plot([x1, x2], [y1, y2], color = clr, linewidth= 0.5)
 
         groups = self.groups
         for iter, group in enumerate(groups):
@@ -106,7 +109,7 @@ class Model:
         for i in range(len(chosen_points)):
             for j in range(i+1, len(chosen_points)):
                 key = get_key(chosen_points[i][0], chosen_points[j][0])
-                distances[key] = (chosen_points[i][1] - chosen_points[j][1])**2+(chosen_points[i][2] - chosen_points[j][2])**2
+                distances[key] = sqrt((chosen_points[i][1] - chosen_points[j][1])**2+(chosen_points[i][2] - chosen_points[j][2])**2)
             print(f"\r\tcalculated {(int(((i+1)*n_all)-((i+1)**2-(i+1))/2+i+1)/int((n_all*n_all-n_all)/2))*100 :.2f}%", end="")
         print(f"\r\tcalculated 100%, finished")
         return distances
@@ -145,7 +148,7 @@ class Model:
         group_q.put(self.start_group)
         group_history = [self.start_group]
         new_p_ids = []
-        print(f"\nUpdating points, minimum {min_points}, current {len(c_points)}")
+        print(f"\nUpdating points, minimum {min_points}, current {len(c_points)}, left {int(len(self.points) - sum(self.added_points))}")
         while len(c_points) < min_points:
             if group_q.empty():
                 print(f"\r\tOnly {len(c_points)} left")
@@ -170,15 +173,8 @@ class Model:
         print(f"\r\taccumulated: {len(c_points)}, finished")
         return new_p_ids
 
-    def update_distances_and_pheromones(self, c_points, c_distances, c_pheromones, old_p, new_p, route): #TODO kontynuuj xDD
+    def update_distances_and_pheromones(self, c_points, c_distances, c_pheromones, old_p, new_p, route):
         print("Updating distances and pheromones...", end = "")
-        # print("\nLOG before:")
-        # print([x[0] for x in c_points])
-        # print([x[0] for x in new_p])
-        # print([x[0] for x in old_p])
-        # print(c_distances)
-        # print(c_pheromones)
-        # print(route)
         route_len_without_zero = len(route)-1
         new_p_len = len(new_p)
         # Usuwanie wszystkich wartości między ścieżką i ścieżką
@@ -195,56 +191,115 @@ class Model:
                 c_pheromones.pop(get_key(p1[0], p2_id))
             #dodawanie nowych dystansów i feromonów dla nowych i starych punktów
             for p2 in new_p:
-                c_distances[get_key(p1[0], p2[0])] = (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
+                c_distances[get_key(p1[0], p2[0])] = sqrt((p1[1] - p2[1])**2+(p1[2] - p2[2])**2)
                 c_pheromones[get_key(p1[0], p2[0])] = 0
         for r1 in range(0, new_p_len):
             for r2 in range(r1+1, new_p_len):
-                c_distances[get_key(new_p[r1][0], new_p[r2][0])] = (new_p[r1][1] - new_p[r2][1])**2+(new_p[r1][2] - new_p[r2][2])**2
+                c_distances[get_key(new_p[r1][0], new_p[r2][0])] = sqrt((new_p[r1][1] - new_p[r2][1])**2+(new_p[r1][2] - new_p[r2][2])**2)
                 c_pheromones[get_key(new_p[r1][0], new_p[r2][0])] = 0
-        # print("LOG after:")
-        # print([x[0] for x in c_points])
-        # print([x[0] for x in new_p])
-        # print([x[0] for x in old_p])
-        # print(c_distances)
-        # print(c_pheromones)
-        # print(route)
         print("\rUpdating distances and pheromones... finished")
 
 
     def ant_trivial(self, c_points, c_distances, c_pheromones):
         route = [0]
+        weights = []
         backpack = 0
         i = 1
         while True:
             if i< len(c_points) and backpack + c_points[i][3] < self.backpack_size:
+                weights.append(c_points[i][3])
                 backpack += c_points[i][3]
                 route.append(int(c_points[i][0]))
                 i += 1
             else:
                 break
+        weights.append(0)
         route.append(0)
-        return route
+        score = self.get_score(route, weights, c_distances)
+        return route, score
 
-    def search_routes(self, n_points, n_ants):
+    def ant(self, c_points, c_distances, c_pheromones):
+        route = [0]
+        weights = []
+        backpack = 0
+        used = np.zeros([len(c_points)])
+        used[0] = 1
+        last_point = c_points[0]
+        while True:
+            backpack_occupancy = backpack/self.backpack_size
+            desirability = np.zeros([len(c_points)])
+            counter = 0
+            for i, point in enumerate(c_points):
+                key = get_key(route[-1], point[0])
+                if not used[i] and backpack + point[3] < self.backpack_size:
+                    # if last_point[4] < backpack_occupancy*c_distances[key]: #TODO lepszy sposób na ucinanie dalekich dopełnień
+                    #     continue
+                    counter += 1
+                    desirability[i] = (1/c_distances[key])**self.distance_weight * (c_pheromones[key]**self.pheromone_weight + point[3]**self.size_weight + point[4]**self.home_weight*backpack_occupancy)
+            if not counter:
+                break
+            max_rand = np.sum(desirability)
+            decision = uniform(0, max_rand)
+            des_sum = 0
+            best_point_id = 0
+            for i, desire in enumerate(desirability):
+                if desire == 0:
+                    continue
+                des_sum += desire
+                if des_sum>decision:
+                    best_point_id = i
+                    break
+            used[i] = 1
+            last_point = c_points[i]
+            backpack += c_points[best_point_id][3]
+            weights.append(c_points[best_point_id][3])
+            route.append(int(c_points[best_point_id][0]))
+        weights.append(0)
+        route.append(0)
+        score = self.get_score(route, weights, c_distances)
+        return route, score
+
+
+    def search_routes(self, n_points, gen_counter = 4):
         points_to_use = self.pick_points(n_points)
         sq_distances = self.init_sq_distances(points_to_use)
         pheromones = self.init_pheromones(points_to_use)
-        # print("\nSTART:")
-        # print([x[0] for x in points_to_use])
-        # print(sq_distances)
-        # print(pheromones)
         result = []
-        while(len(points_to_use)>1):
-            routes = []
-            ants = []
-            for i in range(n_ants):
-                ants.append(ThreadWithReturn(target=self.ant_trivial, args=(points_to_use, sq_distances, pheromones)))
-                ants[i].start()
-            for i in range(n_ants):
-                routes.append(ants[i].join())
-            result.append(routes[0])
-            self.update_state_params(points_to_use, sq_distances, pheromones, routes[0], n_points)
-        return result
+        all_score = 0
+        while len(points_to_use)>1:
+            picked_route = 0
+            picked_score = 0
+            for g in range(gen_counter):
+                g_routes = []
+                g_scores = np.zeros(self.n_ants)
+                ants = []
+                for i in range(self.n_ants):
+                    ants.append(ThreadWithReturn(target=self.ant, args=(points_to_use, sq_distances, pheromones)))
+                    ants[i].start()
+                for i in range(self.n_ants):
+                    route, score = ants[i].join()
+                    g_routes.append(route)
+                    g_scores[i] = score
+                best_ant = np.argmin(g_scores)
+                if picked_score < g_scores[best_ant]:
+                    picked_route = g_routes[best_ant]
+                    picked_score = g_scores[best_ant]
+            result.append(picked_route)
+            all_score += picked_score
+            self.update_state_params(points_to_use, sq_distances, pheromones, picked_route, n_points)
+        return result, all_score
+
+    def distance(self, p1, p2):
+        return (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
+
+    def get_score(self, route, weights, c_distances):
+        sc = 0
+        weight_now = 10 + sum(weights)
+        for i in range(len(route)-1):
+            distance = c_distances[get_key(route[i], route[i + 1])]
+            sc += weight_now * distance
+            weight_now -= weights[i]
+        return sc
 
 
 if __name__ == "__main__":
@@ -255,10 +310,16 @@ if __name__ == "__main__":
     model = Model(5, 50, 1, 1)
     model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
     # model.load_data(GroupedData(n_points=100, box_size=20, group_size=4))
+    #===========
+    # set_seed_for_random(20)
+    # model = Model(5, 1000, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
+    # model.load_data(GroupedData(n_points=10000, box_size=20, group_size= 4))
+    #==============
     # model.show_routes([])
-    routes = model.search_routes(50, 3)
+    routes, score = model.search_routes(100, gen_counter=3)
     # model.show_routes(routes)
     print(routes)
+    print(score)
 
 
 
