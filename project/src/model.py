@@ -24,7 +24,7 @@ class Model:
 
     def load_data(self, gdata: GroupedData):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
-        # print(len(self.points))
+        print(len(self.points))
         # print(self.points[:5])
         # print(self.groups[:5])
         # print(self.groups_neighbours[:15])
@@ -82,6 +82,10 @@ class Model:
                 print(f"\r\tOnly {len(using_points)} left")
                 break
             curr_group = int(group_q.get())
+            print(f"Current group: {curr_group}")
+            print(f"Current group neighbours: {self.groups_neighbours[curr_group]}")
+            print(f"All added groups: {group_history}")
+
             for g in self.groups_neighbours[curr_group]:
                 if g not in group_history:
                     group_q.put(g)
