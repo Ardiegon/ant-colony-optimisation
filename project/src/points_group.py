@@ -4,6 +4,14 @@ from math import sin, cos, sqrt, atan2, radians
 
 class PointsGroup:
     def __init__(self, group_id, min_latitude, max_latitude, min_longitude, max_longitude):
+        '''
+        PointsGroup constructor.
+        :param group_id: id of the group whose data we store in the class
+        :param min_latitude: The minimum latitude from which points can belong to a group
+        :param max_latitude: The maximum latitude from which points can belong to a group
+        :param min_longitude: The minimum longitude from which points can belong to a group
+        :param max_longitude: The maximum longitude from which points can belong to a group
+        '''
         self.group_id = group_id
         self.min_latitude = min_latitude
         self.max_latitude = max_latitude
@@ -14,6 +22,9 @@ class PointsGroup:
         self.neighbours = []
 
     def calculate_mid_coordinates(self):
+        '''
+        Calculates the coordinates of the midpoint of the points that belong to a group
+        '''
         coordinates = [0, 0]
         for point in self.points:
             coordinates[0] += point[0]
@@ -21,13 +32,23 @@ class PointsGroup:
         self.mid_coordinates = [coordinates[0]/len(self.points), coordinates[1]/len(self.points)]
 
     def add_point_to_group(self, point):
+        '''
+        Adds point to the group
+        '''
         self.points.append(point)
         # self.calculate_mid_coordinates()
     
     def add_neighbour(self, neighbour):
+        '''
+        Adds neighbour to the group
+        '''
         self.neighbours.append(neighbour)
 
 def generate_groups():
+    '''
+    It generates groups for each step, which are then used to assign points to them
+    :return: Groups list, consisting of the objects of the PointsGroup class
+    '''
     groups = []
     min_latitude = -90
     max_latitude = 90
@@ -50,6 +71,13 @@ def generate_groups():
     return groups
 
 def split_data(df):
+    '''
+    Assigns points to groups according to their coordinates
+    :return: list of groups, df2:
+        - groups: Groups list, consisting of the objects of the PointsGroup class
+        with added points included in the given group
+        - df2: Points dataframe with added ids of the group they belong to
+    '''
     groups = generate_groups()
     i = 0
     df2 = df.reindex(columns=df.columns.tolist() + ['group_id'])
@@ -63,6 +91,11 @@ def split_data(df):
     return groups, df2
 
 def group_list_to_df(group_list):
+    '''
+    Change the group list to group dataframe
+    :param group_list: Groups list, consisting of the objects of the PointsGroup class
+    :return: Groups dataframe, consisting of data describing a given group
+    '''
     data = []
     for group in group_list:
         data.append([group.group_id, group.min_latitude, group.max_latitude, group.min_longitude, group.max_longitude, []])
@@ -70,6 +103,12 @@ def group_list_to_df(group_list):
     return df
 
 def find_neighbours(group_df):
+    '''
+    Finds neighbors for a given group by coordinates
+    :param group_df: Groups dataframe, consisting of data describing a given group
+        with added group neighbours
+    :return: Groups dataframe, consisting of data describing a given group
+    '''
     df = group_df.copy()
     for index, row in group_df.iterrows():
         n_id_list = []
@@ -99,21 +138,13 @@ def find_neighbours(group_df):
         df.at[index, 'neighbours_id'] = n_id_list
     return df
 
-        # print(n1, n2, n3, n4)
-
-# def find_neighbours(group_df):
-#     df = group_df.copy()
-#     for index, row in group_df.iterrows():
-#         neighbour_list = []
-#         for index2, row2 in group_df.iterrows():
-#             if row['min_latitude'] == row2['max_latitude'] or row['max_latitude'] == row2['min_latitude']:
-#                 if row['min_longitude'] == row2['max_longitude'] or row['max_longitude'] == row2['min_longitude']:
-#                     if index2 not in neighbour_list:
-#                         neighbour_list.append(index2)
-#         df.at[index, 'neighbours_id'] = neighbour_list
-#     return df
-
 def caluclate_distance_from_north_pole(points_df):
+    '''
+    Counts the distance of each point from the starting point (North Pole)
+    :param points_df: Points dataframe, consisting of data describing a given point
+    :return: Points dataframe, consisting of data describing a given point with added distances
+    from North Pole for every point
+    '''
     np_lat = radians(90)
     np_long = radians(0)
     R = 6373.0 # approximate radius of earth in km
@@ -131,10 +162,20 @@ def caluclate_distance_from_north_pole(points_df):
     return df
 
 def save_points_list_to_csv(points_list_df, path):
+    '''
+    Writes point data to a csv file
+    :param points_list_df: Points dataframe, consisting of data describing a given point
+    :param path: The path to which we want to save the csv file
+    '''
     points_list_df = caluclate_distance_from_north_pole(points_list_df)
     points_list_df.to_csv(path + 'points_test.csv', index = False) 
 
 def save_groups_to_csv(groups_list, path):
+    '''
+    Writes group data to a csv file
+    :param groups_list: Groups dataframe, consisting of the objects of the PointsGroup class
+    :param path: The path to which we want to save the csv file
+    '''
     path = path + 'groups_test.csv'
     group_df = group_list_to_df(groups_list)
     df = find_neighbours(group_df)
