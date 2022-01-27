@@ -151,6 +151,9 @@ class Model:
                 print(f"\r\tOnly {len(c_points)} left")
                 break
             curr_group = int(group_q.get())
+            print(f"Current group: {curr_group}")
+            print(f"Current group neighbours: {self.groups_neighbours[curr_group]}")
+            print(f"All added groups: {group_history}")
             for g in self.groups_neighbours[curr_group]:
                 if g not in group_history:
                     group_q.put(g)
