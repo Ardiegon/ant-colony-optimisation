@@ -5,6 +5,10 @@ import pandas as pd
 from project.src.points_group import PointsGroup
 
 class GroupedData:
+    '''
+    class used to pass data to Model.
+    Data format and how we divide it to groups is described in documentation, as it's wide subject.
+    '''
     def __init__(self, points_data_path = None, groups_data_path = None, n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
         if points_data_path is None or groups_data_path is None:
             self.data = self.generate_data(n_points, box_size, group_size, point_size)

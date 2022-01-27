@@ -1,13 +1,8 @@
 import matplotlib.pyplot as plt
-import numpy
-import pandas as pd
 import numpy as np
-import logging
-import time
 from project.src.thread_with_return import ThreadWithReturn
-from project.src.project_utils import set_seed_for_random
-from random import uniform, seed
-from math import sqrt, radians
+from random import uniform
+from math import radians
 from queue import Queue
 from project.src.grouped_data import GroupedData
 
@@ -164,6 +159,13 @@ class Model:
 
 
     def update_points(self, c_points, min_points):
+        '''
+        Updates points as there was a new route picked.
+        :param c_points: reference to batch of points
+        :param min_points: minimum number of points in c_points
+        :return: list of vectors [id_new_point, latitude_new_point, longitude_new_point]
+        representing points newly added to c_points
+        '''
         group_q = Queue()
         group_q.put(self.start_group)
         group_history = [self.start_group]
@@ -191,6 +193,16 @@ class Model:
         return new_p_ids
 
     def update_distances_and_pheromones(self, c_points, c_distances, c_pheromones, old_p, new_p, route):
+        '''
+        Updates distances and pheromones dictionaries after new points were added to c_points and old deleted
+        :param c_points: reference to updated batch of points
+        :param c_distances: distances between points
+        :param c_pheromones: pheromone between points
+        :param old_p: points that last from previous generation
+        :param new_p: points added to current generation
+        :param route: points ids that were removed from previous generation
+        :return:
+        '''
         print("Updating distances and pheromones...", end = "")
         route_len_without_zero = len(route)-1
         new_p_len = len(new_p)
@@ -218,6 +230,16 @@ class Model:
 
 
     def ant_trivial(self, c_points, c_distances, c_pheromones):
+        '''
+        Trivial algorithm for generation specimens.
+        It has zero desision-making skills, and it simply takes more and more random points from
+        neighbourhood untill backpack is full.
+        :param c_points: reference to batch of points
+        :param c_distances: reference to distances dict
+        :param c_pheromones: reference to pheromones dict (unused)
+        :return: route, score
+        score is weighted reindeer weariness for this route only.
+        '''
         route = [0]
         weights = []
         backpack = 0
@@ -236,25 +258,42 @@ class Model:
         return route, score
 
     def ant(self, c_points, c_distances, c_pheromones):
+        '''
+        Sophisticated algorithm for generation and mutation of new specimen in genetic algorithm.
+        From starting point (arctica) it's job is to chose new point to add to the route. It does it by calculating
+        four important indicators:
+        - distance to point
+        - pheromone trail (this route was awarded in previous iterations of this generation)
+        - weight of present on that point
+        - distance to arctica
+        All of them are combined into desirability of point, and then chosen by random number generator.
+
+        :param c_points: reference to batch of points
+        :param c_distances: reference to distances dict
+        :param c_pheromones: reference to pheromones dict
+        :return: route, score
+        score is weighted reindeer weariness for this route only.
+        '''
         route = [0]
         weights = []
         backpack = 0
         used = np.zeros([len(c_points)])
         used[0] = 1
         last_point = c_points[0]
-        while True:
+        while True:  # while we have space in backpack
             backpack_occupancy = backpack/self.backpack_size
             desirability = np.zeros([len(c_points)])
             counter = 0
-            for i, point in enumerate(c_points):
+            for i, point in enumerate(c_points):  # for every point in batch
                 key = get_key(route[-1], point[0])
-                if not used[i] and backpack + point[3] < self.backpack_size:
-                    counter += 1
+                if not used[i] and backpack + point[3] < self.backpack_size:  # that is not in route and can be put in backpack
+                    counter += 1       # calculate desirability
                     desirability[i] = (1/c_distances[key])**self.distance_weight * (c_pheromones[key]**self.pheromone_weight + point[3]**self.size_weight + point[4]**self.home_weight*backpack_occupancy)
             if not counter:
+                # (if there is no points of that type that means backpack is full or we run out of points)
                 break
             max_rand = np.sum(desirability)
-            decision = uniform(0, max_rand)
+            decision = uniform(0, max_rand)  # and generate random number
             des_sum = 0
             best_point_id = 0
             for i, desire in enumerate(desirability):
@@ -262,7 +301,7 @@ class Model:
                     continue
                 des_sum += desire
                 if des_sum>decision:
-                    best_point_id = i
+                    best_point_id = i  # which is used to find new point
                     break
             used[i] = 1
             backpack += c_points[best_point_id][3]
@@ -273,15 +312,23 @@ class Model:
         score = self.get_score(route, weights, c_distances)
         return route, score
 
-
     def search_routes(self, n_points, gen_counter = 4):
-        pheromone_values = [2*((1/self.n_ants)*x-1)**2+1 for x in range(self.n_ants)]
+        '''
+        Genetic algorithm with route as specimen, and "ants" as specimen generators.
+        All of Reproduction, Mutation and Succesion are handled by ants and their pheromones.
+        It's further described in documentation.
+        :param n_points: minimum number of points in batch
+        :param gen_counter: how many generations will it take to generate best route
+        :return: route, all_score
+        all_score is weighted reindeer weariness for all_routes.
+        '''
+        pheromone_values = [0.5*((1/self.n_ants)*x-1)**2 for x in range(self.n_ants)]
         points_to_use = self.pick_points(n_points)
         sq_distances = self.init_sq_distances(points_to_use)
         pheromones = self.init_pheromones(points_to_use)
         result = []
         all_score = 0
-        while len(points_to_use)>1:
+        while len(points_to_use)>1: # while we have points other than arctica
             picked_route = 0
             picked_score = 0
             for g in range(gen_counter):
@@ -289,35 +336,33 @@ class Model:
                 g_scores = np.zeros(self.n_ants)
                 ants = []
                 for i in range(self.n_ants):
-                    ants.append(ThreadWithReturn(target=self.ant, args=(points_to_use, sq_distances, pheromones)))
+                    ants.append(ThreadWithReturn(target=self.ant, args=(points_to_use, sq_distances, pheromones)))  # send an ant for quest of searching new route for santa
                     ants[i].start()
                 for i in range(self.n_ants):
-                    route, score = ants[i].join()
+                    route, score = ants[i].join()  # and wait till they all found some route
                     g_routes.append(route)
                     g_scores[i] = score
                 best_ant = np.argmin(g_scores)
                 max_val = np.max(g_scores)
-                if picked_score < g_scores[best_ant]:
+                if picked_score < g_scores[best_ant]:  # remember best route from all generations
                     picked_route = g_routes[best_ant]
                     picked_score = g_scores[best_ant]
-                for i in range(self.selection_size):
+                for i in range(self.selection_size):  # and award best ants from this generation with pheromone to leave on their routes
                     top_id = np.argmin(g_scores)
                     g_scores[top_id]+=max_val
                     for j in range(len(g_routes[top_id])-1):
                         key = get_key(g_routes[top_id][j], g_routes[top_id][j+1])
                         pheromones[key] += pheromone_values[i]
 
-            result.append(picked_route)
-            all_score += picked_score
-            self.update_state_params(points_to_use, sq_distances, pheromones, picked_route, n_points)
+            result.append(picked_route)  # add best route from this generation to all routes
+            all_score += picked_score  # calculate step of weighted reindeer weariness
+            self.update_state_params(points_to_use, sq_distances, pheromones, picked_route, n_points) # and update batch of points.
         return result, all_score
 
-    # def distance(self, p1, p2):
-    #     return (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
 
     def distance(self, p1, p2):
         """
-        Oblicz odległość haversine'a
+        Haversine.
         """
         # convert decimal degrees to radians
         lat1, lon1, lat2, lon2 = map(radians, [p1[1], p1[2], p2[1], p2[2]])
@@ -330,6 +375,13 @@ class Model:
         return c
 
     def get_score(self, route, weights, c_distances):
+        '''
+        single iteration of weighted reindeer weariness
+        :param route: route that starts with arctica and ends with arctica
+        :param weights: weight of all presents on that route
+        :param c_distances: distances between points in batch
+        :return:
+        '''
         sc = 0
         weight_now = 10 + sum(weights)
         for i in range(len(route)-1):
