@@ -16,7 +16,7 @@ def get_key(point_1_id, point_2_id):
     return f"{int(min(point_1_id, point_2_id))}/{int(max(point_1_id, point_2_id))}"
 
 class Model:
-    def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight, _size_weight, _home_weight):
+    def __init__(self, _n_ants, _backpack_size, _pheromone_weight, _distance_weight, _size_weight, _home_weight, _selection_size):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group, self.picked_points, self.added_points, self.used_groups = (None, None, None, None, None, None, None, None)
         self.n_ants = _n_ants
         self.pheromone_weight = _pheromone_weight
@@ -24,6 +24,7 @@ class Model:
         self.distance_weight = _distance_weight
         self.size_weight = _size_weight
         self.home_weight = _home_weight
+        self.selection_size = _selection_size
 
     def load_data(self, gdata: GroupedData):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
@@ -254,6 +255,7 @@ class Model:
 
 
     def search_routes(self, n_points, gen_counter = 4):
+        pheromone_values = [2*((1/self.n_ants)*x-1)**2+1 for x in range(self.n_ants)]
         points_to_use = self.pick_points(n_points)
         sq_distances = self.init_sq_distances(points_to_use)
         pheromones = self.init_pheromones(points_to_use)
@@ -267,16 +269,24 @@ class Model:
                 g_scores = np.zeros(self.n_ants)
                 ants = []
                 for i in range(self.n_ants):
-                    ants.append(ThreadWithReturn(target=self.ant_trivial, args=(points_to_use, sq_distances, pheromones)))
+                    ants.append(ThreadWithReturn(target=self.ant, args=(points_to_use, sq_distances, pheromones)))
                     ants[i].start()
                 for i in range(self.n_ants):
                     route, score = ants[i].join()
                     g_routes.append(route)
                     g_scores[i] = score
                 best_ant = np.argmin(g_scores)
+                max_val = np.max(g_scores)
                 if picked_score < g_scores[best_ant]:
                     picked_route = g_routes[best_ant]
                     picked_score = g_scores[best_ant]
+                for i in range(self.selection_size):
+                    top_id = np.argmin(g_scores)
+                    g_scores[top_id]+=max_val
+                    for j in range(len(g_routes[top_id])-1):
+                        key = get_key(g_routes[top_id][j], g_routes[top_id][j+1])
+                        pheromones[key] += pheromone_values[i]
+
             result.append(picked_route)
             all_score += picked_score
             self.update_state_params(points_to_use, sq_distances, pheromones, picked_route, n_points)
@@ -287,8 +297,7 @@ class Model:
 
     def distance(self, p1, p2):
         """
-        Calculate the harverstine distance in kilometers between two points
-        on the earth (specified in decimal degrees)
+        Oblicz odległość haversine'a
         """
         # convert decimal degrees to radians
         lat1, lon1, lat2, lon2 = map(radians, [p1[1], p1[2], p2[1], p2[2]])
@@ -312,20 +321,20 @@ class Model:
 
 if __name__ == "__main__":
     processed_data_path = '../data/processed/'
-    # groupedData = GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups.csv')
-    # set_seed_for_random(20)
-    # processed_data_path = '../data/processed/'
-    model = Model(8, 1000, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
-    model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
-    # model.load_data(GroupedData(n_points=100, box_size=20, group_size=4))
+    set_seed_for_random(6)
+
     #===========
-    # set_seed_for_random(20)
-    # model = Model(5, 1000, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
-    # model.load_data(GroupedData(n_points=10000, box_size=20, group_size= 4))
+    # model = Model(8, 1000, _selection_size = 4, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
+    # model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
+    # routes, score = model.search_routes(120, gen_counter=3)
+
+    #===========
+    model = Model(8, 100, _selection_size = 6, _pheromone_weight=2, _distance_weight=4, _size_weight=3, _home_weight=1)
+    model.load_data(GroupedData(n_points=100, box_size=20, group_size= 4))
+    routes, score = model.search_routes(50, gen_counter=3)
+    model.show_routes(routes[:5])
+
     #==============
-    # model.show_routes([])
-    routes, score = model.search_routes(150, gen_counter=3)
-    # model.show_routes(routes)
     print(routes)
     print(score)
 
