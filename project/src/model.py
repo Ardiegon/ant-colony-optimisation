@@ -85,10 +85,6 @@ class Model:
                 print(f"\r\tOnly {len(using_points)} left")
                 break
             curr_group = int(group_q.get())
-            print(f"Current group: {curr_group}")
-            print(f"Current group neighbours: {self.groups_neighbours[curr_group]}")
-            print(f"All added groups: {group_history}")
-
             for g in self.groups_neighbours[curr_group]:
                 if g not in group_history:
                     group_q.put(g)
@@ -154,9 +150,6 @@ class Model:
                 print(f"\r\tOnly {len(c_points)} left")
                 break
             curr_group = int(group_q.get())
-            print(f"Current group: {curr_group}")
-            print(f"Current group neighbours: {self.groups_neighbours[curr_group]}")
-            print(f"All added groups: {group_history}")
             for g in self.groups_neighbours[curr_group]:
                 if g not in group_history:
                     group_q.put(g)
@@ -307,7 +300,7 @@ if __name__ == "__main__":
     # groupedData = GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups.csv')
     # set_seed_for_random(20)
     # processed_data_path = '../data/processed/'
-    model = Model(5, 50, 1, 1)
+    model = Model(5, 50, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
     model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
     # model.load_data(GroupedData(n_points=100, box_size=20, group_size=4))
     #===========
