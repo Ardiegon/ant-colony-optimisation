@@ -2,13 +2,12 @@ import numpy as np
 
 from math import floor, sqrt
 import pandas as pd
-from points_group import PointsGroup
+from project.src.points_group import PointsGroup
 
 class GroupedData:
-    def __init__(self, data_path = "", n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
+    def __init__(self, points_data_path = None, groups_data_path = None, n_points = 50, box_size = 20, group_size = 4, point_size = (1,50)):
         if points_data_path is None or groups_data_path is None:
             self.data = self.generate_data(n_points, box_size, group_size, point_size)
-
         else:
             self.data = self.load_data(points_data_path, groups_data_path)
 
@@ -94,7 +93,8 @@ class GroupedData:
             groups.append([])
 
         for index, row in points_df.iterrows():
-            groups[int(row['group_id'])].append(index)
+            to_append = [row['GiftId'], row['Latitude'], row['Longitude'], row['Weight'], row['distance_np']]
+            groups[int(row['group_id'])].append(np.asarray(to_append))
 
         start_point = points_df.loc[0, ['GiftId', 'Latitude', 'Longitude', 'Weight', 'distance_np']].tolist()
         start_point = np.array(start_point)
