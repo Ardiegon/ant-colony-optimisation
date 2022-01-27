@@ -8,9 +8,9 @@ class PointsGroup:
         PointsGroup constructor.
         :param group_id: id of the group whose data we store in the class
         :param min_latitude: The minimum latitude from which points can belong to a group
-        :param max_latitude: The maximum latitude from which points can belong to a group
+        :param max_latitude: The maximum latitude to which points can belong to a group
         :param min_longitude: The minimum longitude from which points can belong to a group
-        :param max_longitude: The maximum longitude from which points can belong to a group
+        :param max_longitude: The maximum longitude to which points can belong to a group
         '''
         self.group_id = group_id
         self.min_latitude = min_latitude
