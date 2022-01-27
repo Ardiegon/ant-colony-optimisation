@@ -61,6 +61,17 @@ class GroupedData:
         return points, groups, group_neighbours, start_point, start_group
 
     def load_data(self, points_data, groups_data):
+        '''
+        Loads data from csv files. Processes data to obtain neighbors and a starting point group
+        :param points_data: path to csv file with points data
+        :param groups_data: path to csv file with groups data
+        :return: list that includes: points, groups, group_neighbours, start_point, start_group
+            - points: list of points containing info about them ('GiftId', 'Latitude', 'Longitude', 'Weight', 'distance_np')
+            - groups: list containing a list of points included in a given group
+            - group_neighbours: a list containing a list of group neighbour ids
+            - start_point: starting point coordinates (North Pole)
+            - start_group: id of the group that contains the starting point
+        '''
         points_df = pd.read_csv(points_data)
         groups_df = pd.read_csv(groups_data)
         group_class = []
