@@ -93,7 +93,8 @@ class GroupedData:
             groups.append([])
 
         for index, row in points_df.iterrows():
-            groups[int(row['group_id'])].append(index)
+            to_append = [row['GiftId'], row['Latitude'], row['Longitude'], row['Weight'], row['distance_np']]
+            groups[int(row['group_id'])].append(np.asarray(to_append))
 
         start_point = points_df.loc[0, ['GiftId', 'Latitude', 'Longitude', 'Weight', 'distance_np']].tolist()
         start_point = np.array(start_point)

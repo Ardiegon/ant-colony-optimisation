@@ -24,6 +24,13 @@ class Model:
 
     def load_data(self, gdata: GroupedData):
         self.points, self.groups, self.groups_neighbours, self.start_point, self.start_group = gdata.get_data()
+        # print(len(self.points))
+        # print(self.points[:5])
+        # print(self.groups[:5])
+        # print(self.groups_neighbours[:15])
+        # print(self.start_point)
+        # print(self.start_group)
+        # print(self.groups[int(self.start_group)])
 
         self.picked_points = np.zeros(len(self.points))
         self.added_points = np.zeros(len(self.points))
@@ -234,10 +241,13 @@ class Model:
 
 
 if __name__ == "__main__":
-    set_seed_for_random(20)
     processed_data_path = '../data/processed/'
+    # groupedData = GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups.csv')
+    # set_seed_for_random(20)
+    # processed_data_path = '../data/processed/'
     model = Model(5, 50, 1, 1)
-    model.load_data(GroupedData(processed_data_path + 'points_test.csv', processed_data_path + 'groups_test.csv'))
+    model.load_data(GroupedData(processed_data_path + 'points.csv', processed_data_path + 'groups.csv'))
+    # model.load_data(GroupedData(n_points=100, box_size=20, group_size=4))
     # model.show_routes([])
     routes = model.search_routes(50, 3)
     # model.show_routes(routes)
