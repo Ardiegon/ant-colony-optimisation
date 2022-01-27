@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy
 import pandas as pd
 import numpy as np
 import logging
@@ -231,12 +232,13 @@ class Model:
         # print(sq_distances)
         # print(pheromones)
         result = []
-        score = 0
+        all_score = 0
         while len(points_to_use)>1:
             picked_route = 0
+            picked_score = 0
             for g in range(gen_counter):
                 g_routes = []
-                scores = []
+                g_scores = np.zeros(n_ants)
                 ants = []
                 for i in range(n_ants):
                     ants.append(ThreadWithReturn(target=self.ant_trivial, args=(points_to_use, sq_distances, pheromones)))
@@ -244,11 +246,15 @@ class Model:
                 for i in range(n_ants):
                     route, score = ants[i].join()
                     g_routes.append(route)
-                    scores.append(score)
-                picked_route = g_routes[0]
+                    g_scores[i] = score
+                best_ant = np.argmax(g_scores)
+                if picked_score < g_scores[best_ant]:
+                    picked_route = g_routes[best_ant]
+                    picked_score = g_scores[best_ant]
             result.append(picked_route)
+            all_score += picked_score
             self.update_state_params(points_to_use, sq_distances, pheromones, picked_route, n_points)
-        return result, score
+        return result, all_score
 
     def distance(self, p1, p2):
         return (p1[1] - p2[1])**2+(p1[2] - p2[2])**2
@@ -267,12 +273,13 @@ class Model:
 
 if __name__ == "__main__":
     set_seed_for_random(20)
-    model = Model(5, 50, 1, 1)
+    model = Model(5, 1000, 1, 1)
     model.load_data(GroupedData(n_points=100, box_size=20, group_size= 4))
     # model.show_routes([])
-    routes = model.search_routes(20, 3)
+    routes, score = model.search_routes(20, 3)
     # model.show_routes(routes)
     print(routes)
+    print(score)
 
 
 
