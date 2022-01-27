@@ -288,15 +288,13 @@ class Model:
         return sc
 
 
-
-
 if __name__ == "__main__":
     set_seed_for_random(20)
-    model = Model(5, 50, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
-    model.load_data(GroupedData(n_points=20, box_size=20, group_size= 4))
-    model.show_routes([])
-    routes, score = model.search_routes(10, gen_counter=10)
-    model.show_routes(routes)
+    model = Model(5, 1000, _pheromone_weight=1, _distance_weight=3, _size_weight=3, _home_weight=1)
+    model.load_data(GroupedData(n_points=10000, box_size=20, group_size= 4))
+    # model.show_routes([])
+    routes, score = model.search_routes(100, gen_counter=3)
+    # model.show_routes(routes)
     print(routes)
     print(score)
 
