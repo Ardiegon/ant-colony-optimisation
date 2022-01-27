@@ -46,7 +46,7 @@ class PointsGroup:
 
 def generate_groups():
     '''
-    It generates groups for each step, which are then used to assign points to them
+    Generates groups for degree_step, which are then used to assign points to them
     :return: Groups list, consisting of the objects of the PointsGroup class
     '''
     groups = []
@@ -106,7 +106,6 @@ def find_neighbours(group_df):
     '''
     Finds neighbors for a given group by coordinates
     :param group_df: Groups dataframe, consisting of data describing a given group
-        with added group neighbours
     :return: Groups dataframe, consisting of data describing a given group
     '''
     df = group_df.copy()
@@ -173,7 +172,7 @@ def save_points_list_to_csv(points_list_df, path):
 def save_groups_to_csv(groups_list, path):
     '''
     Writes group data to a csv file
-    :param groups_list: Groups dataframe, consisting of the objects of the PointsGroup class
+    :param groups_list: Groups list, consisting of the objects of the PointsGroup class
     :param path: The path to which we want to save the csv file
     '''
     path = path + 'groups_test.csv'
